@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>贪吃蛇最终</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .main {
+            width: 800px;
+            height: 400px;
+            margin: 50px auto;
+        }
+
+        .btn {
+            width: 100px;
+            height: 40px;
+        }
+
+        .map {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background: #ccc;
+        }
+
+        #score {
+            padding-left: 120px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main">
+        <button class="btn1" id="start">开始游戏</button>
+        <button class="btn2" id="pause">暂停游戏</button>
+        <button class="btn3" id="stop">停止游戏</button>
+        <span id="score">得分：0</span>
+        <div class="map" id="map"></div>
+    </div>
+</body>
+
+</html>
+<script>
+    class Tools {
+        $ = id => document.getElementById(id)
+        _c = (tagName) => document.createElement(tagName)
+    }
+
+    //Snake类
+    class Snake extends Tools {
+        constructor(context2) {
+            super()
+            this.body = [
+                { x: 4, y: 0 },
+                { x: 3, y: 0 },
+                { x: 2, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 0 }
+            ]
+            this.map = this.$('map')
+            this.score = this.$('score')
+            this.count = 0;
+            this.width = 15
+            this.height = 15
+            this.direction = 'right'
+            this.keyEvent()
+            if (context2 instanceof Food) {
+                this.f = context2
+            }
+        }
+
+        //画蛇
+        display = () => {
+            this.body.forEach(item => {
+                if (item.oldNode) {
+                    this.map.removeChild(item.oldNode)
+                }
+                let a = Math.random() * 256
+                let b = Math.random() * 256
+                let c = Math.random() * 256
+                let div = this._c('div')
+                div.style.width = this.width + 'px'
+                div.style.height = this.height + 'px'
+                div.style.backgroundColor = `rgb(${a},${b},${c})`
+                div.style.borderRadius = '50%'
+                div.style.position = 'absolute'
+                div.style.left = this.width * item.x + 'px'
+                div.style.top = this.height * item.y + 'px'
+                item.oldNode = div
+                this.map.appendChild(div)
+            })
+           
+            /*  for (let i = 0; i < this.body.length; i++) {
+                console.log(this.body[i]);
+             } */
+        }
+
+        //蛇跑
+        run = () => {
+            let final = this.body.pop()
+            let first = { ...this.body[0] }
+            let { x } = first
+            let { y } = first
+            switch (this.direction) {
+                case 'left':
+                    x -= 1;
+                    break;
+                case 'up':
+                    y -= 1;
+                    break;
+                case 'right':
+                    x += 1;
+                    break;
+                case 'down':
+                    y += 1;
+            }
+            final.x = x
+            final.y = y
+            this.headx = this.width * x
+            this.heady = this.width * y
+            if (this.headx === this.f.foodx && this.heady === this.f.foody) {
+                //吃到
+                this.count += 1
+                this.body.push({ x, y })
+                this.f.removeFood()
+                this.f.createFood()
+                this.score.innerHTML = '得分：' + this.count
+            }
+           
+            this.body.unshift(final)
+            this.display()
+            this.limit()
+        }
+        //撞墙限制
+        limit = () => {
+            if (this.headx < 0 || this.headx > this.map.offsetWidth - this.width || this.heady < 0 || this.heady > this.map.offsetHeight - this.height) {
+                alert('撞墙,您的最终得分是' + this.count + '分')
+                b.pauseGame()
+            }
+        }
+
+        //键盘按下
+        keyEvent = () => {
+            document.onkeydown = (e) => {
+                switch (e.keyCode) {
+                    case 37:
+                        if (this.direction !== 'right') {
+                            this.direction = 'left'
+                        }
+                        break
+                    case 38:
+                        if (this.direction !== 'down') {
+                            this.direction = 'up'
+                        }
+                        break
+                    case 39:
+                        if (this.direction !== 'left') {
+                            this.direction = 'right'
+                        }
+                        break
+                    case 40:
+                        if (this.direction !== 'up') {
+                            this.direction = 'down'
+                        }
+                }
+            }
+        }
+    }
+
+    //Btn类
+    class Btn extends Tools {
+        constructor(context1, context2) {
+            super()
+            this.start = this.$('start')
+            this.pause = this.$('pause')
+            this.stop = this.$('stop')
+            if (context1 instanceof Snake && context2 instanceof Food) {
+                this.s = context1
+                this.f = context2
+                this.btnEvent()
+            }
+        }
+        btnEvent = () => {
+            this.start.onclick = this.startGame
+            this.pause.onclick = this.pauseGame
+            this.stop.onclick = this.stopGame
+        }
+        //开始按钮
+        startGame = () => {
+            this.start.disabled = true;
+            this.pause.disabled = false;
+            /*  if (this.timer) {
+                 clearInterval(this.timer)
+             } */
+            this.f.createFood();
+            this.timer = setInterval(() => {
+                this.s.run()
+            }, 200)
+        }
+        //暂停按钮
+        pauseGame = () => {
+            clearInterval(this.timer)
+            this.pause.disabled = true;
+            this.start.disabled = false;
+        }
+        //停止按钮
+        stopGame = () => {
+            this.f.removeFood()
+            this.s.map.innerHTML = ''
+            this.s.body = [
+                { x: 4, y: 0 },
+                { x: 3, y: 0 },
+                { x: 2, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 0 }
+            ]
+            this.s.direction = 'right'
+            clearInterval(this.timer)
+            this.s.display()
+            this.s.score.innerHTML = '得分：' + 0
+            this.s.count = 0
+        }
+    }
+
+    //Food类
+    class Food extends Tools {
+        constructor() {
+            super()
+            this.map = this.$('map')
+            this.width = 15
+            this.height = 15
+        }
+        foodPosition = () => {
+            this.left = Math.ceil(Math.random() * (this.map.offsetWidth - this.width))
+            this.top = Math.ceil(Math.random() * (this.map.offsetHeight - this.height))
+            if (this.left % this.width === 0 && this.top % this.height === 0) {
+                this.foodx = this.left
+                this.foody = this.top
+            } else {
+                this.foodPosition()
+            }
+        }
+
+        createFood = () => {
+            if (this.food) { return }
+            let food = this._c('div')
+            food.style.width = this.width + 'px'
+            food.style.height = this.height + 'px'
+            food.style.backgroundColor = 'black'
+            food.style.borderRadius = '50%'
+            this.foodPosition()
+            food.style.position = 'absolute'
+            food.style.left = this.foodx + 'px'
+            food.style.top = this.foody + 'px'
+            this.food = food
+            this.map.appendChild(food)
+        }
+        removeFood = () => {
+            this.map.removeChild(this.food)
+            this.food = null;
+        }
+    }
+
+
+    let f = new Food()
+    let s = new Snake(f)
+    s.display()
+    let b = new Btn(s, f)
+</script>
